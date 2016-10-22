@@ -28,7 +28,7 @@ export NVCC = nvcc
 DEBUG = 0
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -lcufft
 
 # the additional compile flags you want to add
 ADD_CFLAGS =
@@ -38,15 +38,15 @@ ADD_CFLAGS =
 #---------------------------------------------
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
-# USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = /usr/local/cuda
+#USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
-USE_CUDNN = 0
+USE_CUDNN = 1
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
@@ -66,7 +66,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
 USE_BLAS = apple
 else
-USE_BLAS = atlas
+USE_BLAS = openblas
 endif
 
 # add path to intel library, you may need it for MKL, if you did not add the path
