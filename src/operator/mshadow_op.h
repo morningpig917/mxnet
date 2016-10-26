@@ -311,6 +311,21 @@ struct reciprocal_square_root_grad {
   }
 };
 
+/*!\ \brief used for generate element signed sqrt */
+struct signed_square_root {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(sqrtf(a*(a >= 0 ? 1.0f:-1.0f)) * (a >= 0 ? 1.0f:-1.0f));
+  }
+};
+
+struct signed_square_root_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(DType(1.0f) / (1e-7+a*DType((a >= 0 ? 2.0f:-2.0f))));
+  }
+};
+
 /*! \brief used for generate element of round */
 struct round {
   template<typename DType>

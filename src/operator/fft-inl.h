@@ -54,28 +54,28 @@ public:
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
 
+    // the last dimention should be the dimension of fft vector
     if (!init_cufft_) {
-      CHECK_EQ(in_data[fft::kData].ndim(), 4);
-      for (int i=0; i<4; ++i){
-        shape_[i] = in_data[fft::kData].shape_[i];
-      }      
-      dim_ = shape_[3];
+      n_ffts = in_data[fft::kData].shape_.ProdShape(0, in_data[fft::kData].ndim()-1);
+      dim_ = in_data[fft::kData].shape_[in_data[fft::kData].ndim()-1];
+
       stride_ = param_.compute_size*dim_;
 
       init_cufft_ = true;
 
-      num_compute = shape_[0]*shape_[1]*shape_[2]/param_.compute_size;
-      //std::cout<<"param_.compute_size="<<param_.compute_size<<", stride_="<<stride_<<", dim_="<<dim_<<std::endl;
-    }
+      // will handle the (possibly) incomplete group later
+      num_compute = n_ffts / param_.compute_size;
+    }      
+
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     //const TShape& oshape = out_data[fft::kOutComplex].shape_;
     const TShape& ishape = in_data[fft::kData].shape_;
     const TShape& oshape = out_data[fft::kOutComplex].shape_; 
     Tensor<xpu, 2, DType> data = in_data[fft::kData].get_with_shape<xpu, 2, DType>(
-          Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+          Shape2(n_ffts, dim_), s);
     Tensor<xpu, 2, DType> out = out_data[fft::kOutComplex].get_with_shape<xpu, 2, DType>(
-          Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+          Shape2(n_ffts, dim_*2), s);
 
     // need temp space to pad the data into complex numbers due to cufft interface
     Tensor<xpu, 1, DType> workspace = 
@@ -99,7 +99,7 @@ public:
     cufftDestroy(plan);
 
     // handle the remaining samples
-    size_t remain_num = shape_[0]*shape_[1]*shape_[2] - param_.compute_size*num_compute;
+    size_t remain_num = n_ffts - param_.compute_size*num_compute;
     if (remain_num>0){
       cufftHandle plan_remain;
       cufftPlanMany(&plan_remain, 1, &dim_, nullptr, 0, 0, nullptr, 0,0,
@@ -137,9 +137,9 @@ public:
     const TShape& ishape = in_grad[fft::kData].shape_;
     const TShape& oshape = out_grad[fft::kOutComplex].shape_; 
     Tensor<xpu, 2, DType> gdata = in_grad[fft::kData].get_with_shape<xpu, 2, DType>(
-          Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+          Shape2(n_ffts, dim_), s);
     Tensor<xpu, 2, DType> grad = out_grad[fft::kOutComplex].get_with_shape<xpu, 2, DType>(
-          Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+          Shape2(n_ffts, dim_*2), s);
 
     // need temp space to pad the data into complex numbers due to cufft interface
     Tensor<xpu, 1, DType> workspace = 
@@ -164,7 +164,7 @@ public:
     cufftDestroy(plan);
 
     // handle the remaining samples
-    size_t remain_num = shape_[0]*shape_[1]*shape_[2] - param_.compute_size*num_compute;
+    size_t remain_num = n_ffts - param_.compute_size*num_compute;
     if (remain_num>0){
       cufftHandle plan_remain;
       cufftPlanMany(&plan_remain, 1, &dim_, nullptr, 0, 0, nullptr, 0,0,
@@ -187,9 +187,8 @@ public:
   }
 private:
   FFTParam param_;
-  int dim_, stride_, num_compute;
+  int dim_, stride_, num_compute, n_ffts;
   bool init_cufft_;
-  mshadow::Shape<4> shape_;
 }; // class FFTOp
 
 // Declare Factory Function, used for dispatch specialization
@@ -221,7 +220,12 @@ public:
     if (dshape.ndim()==0) return false;
 
     out_shape->clear();
-    out_shape->push_back(Shape4(dshape[0], dshape[1], dshape[2], dshape[3]*2));
+    if (dshape.ndim()==4){
+      out_shape->push_back(Shape4(dshape[0], dshape[1], dshape[2], dshape[3]*2));
+    } else if (dshape.ndim()==2){
+      out_shape->push_back(Shape2(dshape[0], dshape[1]*2));
+    }
+    
     return true;
   }
 

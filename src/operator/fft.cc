@@ -54,5 +54,5 @@ MXNET_REGISTER_OP_PROPERTY(FFT, FFTProp)
 .describe("Apply FFT to input.")
 .add_argument("data", "Symbol", "Input data to the FFTOp.")
 .add_arguments(FFTParam::__FIELDS__());
-} // namespace mxnet 
 } // namespace op
+} // namespace mxnet

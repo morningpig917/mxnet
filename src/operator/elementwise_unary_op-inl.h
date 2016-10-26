@@ -202,6 +202,12 @@ MXNET_REGISTER_SIMPLE_OP(rsqrt, XPU)
 .set_gradient(XPU::kDevMask,
               UnaryBackwardUseIn_<XPU, mshadow_op::reciprocal_square_root_grad>, kInplaceOutIn)
 .describe("Take rsqrt of the src");
+// ssqrt
+MXNET_REGISTER_SIMPLE_OP(ssqrt, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::signed_square_root>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseOut_<XPU, mshadow_op::signed_square_root_grad>, kInplaceOutIn)
+.describe("Take signed sqrt of the src");
+
 // exp
 MXNET_REGISTER_SIMPLE_OP(exp, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::exp>, kInplaceInOut)
