@@ -138,17 +138,21 @@ public:
     out_shape->clear();
     if (dshape.ndim()==4){
       // check the shapes of h and s
-    	CHECK_EQ((*in_shape)[CountSketch::kH][0], dshape[3]) 
-    			<< "H should be 1D tensor with same length as input shape[3]";
-    	CHECK_EQ((*in_shape)[CountSketch::kS][0], dshape[3]) 
-    			<< "S should be 1D tensor with same length as input shape[3]";
+    	CHECK_EQ((*in_shape)[CountSketch::kH][1], dshape[3]) 
+    			<< "H should be 2D tensor with same length as input shape[3], "
+                        << (*in_shape)[CountSketch::kH][1]<<" v.s. "<<dshape[3];
+    	CHECK_EQ((*in_shape)[CountSketch::kS][1], dshape[3]) 
+    			<< "S should be 2D tensor with same length as input shape[3], "
+                        << (*in_shape)[CountSketch::kS][1]<<" v.s. "<<dshape[3];
 
     	out_shape->push_back(Shape4(dshape[0], dshape[1], dshape[2], param_.out_dim));
     } else if (dshape.ndim()==2){
-    	CHECK_EQ((*in_shape)[CountSketch::kH][0], dshape[1]) 
-    			<< "H should be 1D tensor with same length as input shape[1]";
-    	CHECK_EQ((*in_shape)[CountSketch::kS][0], dshape[1]) 
-    			<< "S should be 1D tensor with same length as input shape[1]";
+    	CHECK_EQ((*in_shape)[CountSketch::kH][1], dshape[1]) 
+    			<< "H should be 2D tensor with same length as input shape[1], "
+                        << (*in_shape)[CountSketch::kH][1]<<" v.s. "<<dshape[1];
+    	CHECK_EQ((*in_shape)[CountSketch::kS][1], dshape[1]) 
+    			<< "S should be 2D tensor with same length as input shape[1], "
+                        << (*in_shape)[CountSketch::kS][1]<<" v.s. "<<dshape[1];
     	out_shape->push_back(Shape2(dshape[0], param_.out_dim));
     } else {
     	CHECK_EQ(dshape.ndim(), 2) <<"Data should be 2D or 4D!";

@@ -190,7 +190,7 @@ def _parse_aux_states(sym, aux_states, ctx):
     return aux_states
 
 
-def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_train=True):
+def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_train=True, location_test=None, sym=None):
     """Calculates a numeric gradient via finite difference method.
 
     Class based on Theano's `theano.gradient.numeric_grad` [1]
@@ -225,6 +225,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         for i in range(np.prod(v.shape)):
             # inplace update
             v.reshape((np.prod(v.shape), 1))[i] += eps
+            #if i<3:
+                #print("{}, {} ".format(k, v))
             # set initial states. Need to set all due to inplace operations
             for key, val in location.items():
                 executor.arg_dict[key][:] = val
@@ -232,9 +234,18 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
             executor.forward(is_train=use_forward_train)
+            #if k=='data':
+                #print(executor.outputs[0].asnumpy())
             f_eps = executor.outputs[0].asnumpy()[0]
+
+            # debug
+            # if i<3 and k=='data':
+            #     print("i={}, eps {}, f_eps-f_x {},  weight, {}, ".format(i, eps, f_eps- f_x, location_test['__random_proj'].asnumpy()[0, location['h'][i]]))
+
+
             approx_grads[k].ravel()[i] = (f_eps - f_x) / eps
             v.reshape((np.prod(v.shape), 1))[i] = old_value.reshape((np.prod(v.shape), 1))[i]
+
 
     return approx_grads
 
@@ -315,10 +326,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]), ctx=ctx))])
+    #print("new location:{}".format([v.asnumpy() for k,v in location.items()]))
     args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
                          + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+
+    #print("inferring shape: {}".format(sym.infer_shape(data=location['data'].shape, h=location['h'].shape, 
+    #                    s=location['s'].shape)))
 
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
@@ -330,15 +345,18 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
     assert len(executor.outputs) == 1
 
     executor.forward(is_train=True)
+
     executor.backward()
     symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
 
     numeric_gradients = numeric_grad(executor, location_npy, aux_states_npy,
-                                     eps=numeric_eps, use_forward_train=use_forward_train)
+                                     eps=numeric_eps, use_forward_train=use_forward_train, location_test=location)
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
         orig_grad = args_grad_npy[name]
         sym_grad = symbolic_grads[name]
+
+        #print("{}, fd_grad:{}, orig_grad:{}, sym_grad:{}".format(name, fd_grad, orig_grad, sym_grad))
         if grad_req[name] == 'write':
             rel = reldiff(fd_grad, sym_grad)
             arr_l = [fd_grad, sym_grad]
@@ -351,6 +369,21 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
         else:
             raise ValueError
         if np.isnan(rel) or rel > check_eps:
+            # debug
+            # diff = arr_l[0]-arr_l[1]
+            # print(fd_grad[1])
+            # print(fd_grad[33])
+            # print(sym_grad[1])
+            # print(sym_grad[33])
+            # max_idx = np.argmax(np.abs(arr_l[0]-arr_l[1]))
+            # max_val = np.max(np.abs(arr_l[0]-arr_l[1]))
+            # out_col = location_npy['h'][max_idx%10]
+            # out_row = max_idx//10
+            # max_weight = location['__random_proj'].asnumpy()[out_row, out_col]
+            # print(location_npy['h'])
+
+            # print("max error palce: {}, value: {}, weight:{}".format(max_idx, max_val, max_weight) )
+
             np.set_printoptions(threshold=4, suppress=True)
             msg = npt.build_err_msg(arr_l,
                                     err_msg="In symbol \"%s\", ctx=%s, "
@@ -359,6 +392,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
                                     %(sym.name, str(ctx), name, grad_req[name], rel, check_eps),
                                     names=["NUMERICAL", "BACKWARD"])
             raise Exception(msg)
+        else:
+            print("passed.")
 
 
 def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=None):
