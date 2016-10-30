@@ -89,7 +89,7 @@ inline void CountSketchForward(Tensor<gpu, 2, DType> &out,
 	const DType *in_ptr = in.dptr_;
 	const DType *h_ptr = h.dptr_;
 	const DType *s_ptr = s.dptr_;
-	for ( int bstart = 0; bstart < n_samples; bstart += processing_batch_size ){
+	for ( int bstart = 0; bstart <= n_samples-processing_batch_size; bstart += processing_batch_size ){
 		const int batchlen = min(processing_batch_size, n_samples - bstart );
 		const int nthreads = batchlen * in_dim;
 		const int threads_per_block = min(THREADS_PER_BLOCK, nthreads);// to make number of threads the same as input 
@@ -116,7 +116,7 @@ inline void CountSketchBackward(Tensor<gpu, 2, DType> &in_grad,
 	const DType *out_grad_ptr = out_grad.dptr_;
 	const DType *h_ptr = h.dptr_;
 	const DType *s_ptr = s.dptr_;
-	for ( int bstart = 0; bstart < n_samples; bstart += processing_batch_size) {
+	for ( int bstart = 0; bstart <= n_samples-processing_batch_size; bstart += processing_batch_size) {
 		const int batchlen = min(processing_batch_size, n_samples - bstart);
 
 		const int nthreads = batchlen * in_dim;

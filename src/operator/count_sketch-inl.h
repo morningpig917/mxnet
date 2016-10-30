@@ -54,17 +54,22 @@ public:
 		CHECK_EQ(in_data.size(), 3);
 		CHECK_EQ(out_data.size(), 1);
 		Stream<xpu> *s = ctx.get_stream<xpu>();
+
 	
 		// use FlatTo2D to preseve the possible 4D shape
 		// h and s should be 1d vectors
 		Tensor<xpu, 2, DType> data = in_data[CountSketch::kData].FlatTo2D<xpu, DType>(s);
-		Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get<xpu, 1, DType>(s);
-		Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get<xpu, 1, DType>(s);
+
+		const TShape& hshape = in_data[CountSketch::kH].shape_;
+		const TShape& sshape = in_data[CountSketch::kS].shape_;
+		Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(
+																						Shape1(hshape.ProdShape(0, hshape.ndim())), s);
+		Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(
+		  																			Shape1(sshape.ProdShape(0, sshape.ndim())), s);
 		Tensor<xpu, 2, DType> out = out_data[CountSketch::kOut].FlatTo2D<xpu, DType>(s);
 
 		n_samples = data.shape_[0];
 		in_dim = data.shape_[1];
-
     // firstly set out to zero as we will use sum
     out=0;
 
@@ -86,15 +91,20 @@ public:
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
-		using namespace mshadow;
-		Stream<xpu> *s = ctx.get_stream<xpu>();
-		Tensor<xpu, 2, DType> ograd = out_grad[CountSketch::kOut].FlatTo2D<xpu, DType>(s);
-		Tensor<xpu, 2, DType> dgrad = in_grad[CountSketch::kData].FlatTo2D<xpu, DType>(s);
-		Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get<xpu, 1, DType>(s);
-		Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get<xpu, 1, DType>(s);
+    using namespace mshadow;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 2, DType> ograd = out_grad[CountSketch::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> dgrad = in_grad[CountSketch::kData].FlatTo2D<xpu, DType>(s);
 
-		CountSketchBackward(dgrad, ograd, h, ss, n_samples,
-								this->param_.processing_batch_size, in_dim, this->param_.out_dim);
+    const TShape& hshape = in_data[CountSketch::kH].shape_;
+    const TShape& sshape = in_data[CountSketch::kS].shape_;
+		Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(
+                                            Shape1(hshape.ProdShape(0, hshape.ndim())), s);
+    Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(
+                                            Shape1(sshape.ProdShape(0, sshape.ndim())), s);
+
+    CountSketchBackward(dgrad, ograd, h, ss, n_samples,
+            this->param_.processing_batch_size, in_dim, this->param_.out_dim);
 	}
 private:
 	CountSketchParam param_;
