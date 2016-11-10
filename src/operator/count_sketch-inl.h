@@ -12,7 +12,8 @@
 #include <map>
 #include <vector>
 
-#include <stdio.h>
+// #include <stdio.h>
+// #include <time.h>
 
 #include <string>
 #include <utility>
@@ -70,16 +71,21 @@ public:
 
 		n_samples = data.shape_[0];
 		in_dim = data.shape_[1];
+
     // firstly set out to zero as we will use sum
     out=0;
 
 		CountSketchForward(out, data, h, ss, n_samples, 
 							this->param_.processing_batch_size, in_dim, this->param_.out_dim);
-    // printf("in_dim=%d, out.shape=%d,%d\n", in_dim, out.shape_[0], out.shape_[1]);
+    // debug
+    // time_t timep;
+    // time(&timep);
+    // printf("time: %d, in_dim=%d, out.shape=%d,%d\n", timep, in_dim, out.shape_[0], out.shape_[1]);
     // for (int i=0; i<this->param_.out_dim; ++i) {
     //   DType tmp;
     //   cudaMemcpy(&tmp, out.dptr_+i, sizeof(DType), cudaMemcpyDeviceToHost);
-    //   printf("%f\t", tmp);
+    //   if(tmp!=0)
+    //     printf("%f\t", tmp);
     // }
     // printf("\n");
 	}
