@@ -322,7 +322,7 @@ struct signed_square_root {
 struct signed_square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (1e-7+a*DType((a >= 0 ? 2.0f:-2.0f))));
+    return DType(DType(1.0f) / (0.06+a*DType((a >= 0 ? 2.0f:-2.0f))));
   }
 };
 

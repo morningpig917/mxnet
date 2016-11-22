@@ -110,7 +110,8 @@ public:
       Assign(out.Slice(param_.compute_size*num_compute, param_.compute_size*num_compute+remain_num), req[ifft::kOut], complex_toreal(complex_data));
       cufftDestroy(plan_remain);    
     }
-    out /= dim_;
+    // commenting this out to be consistant with caffe
+    // out /= dim_;
   }
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
@@ -172,7 +173,8 @@ public:
       cufftDestroy(plan_remain);
     
     }
-    gdata /= dim_;
+    // commenting this out to be consistant with caffe
+    // gdata /= dim_;
   }
 private:
   IFFTParam param_;
